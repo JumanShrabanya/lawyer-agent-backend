@@ -12,6 +12,8 @@ uvicorn app.main:app --reload
 
 The development backend uses SQLite and deterministic local retrieval. It does not call an external model or logging service. PostgreSQL/pgvector, OCR, and self-hosted embedding/LLM providers can be added behind the service interfaces without changing the case authorization boundary.
 
+To enable Ollama Cloud explicitly, copy `.env.example` to `.env` and set `OLLAMA_API_KEY` plus `ALLOW_OUTBOUND_INFERENCE=true`. Case passages are then sent to the configured Ollama `/api/chat` endpoint; leave the flag `false` to keep inference offline. Never commit `.env` or place the key in frontend code.
+
 ## Structure
 
 - `app/api/` — HTTP routers and request dependencies

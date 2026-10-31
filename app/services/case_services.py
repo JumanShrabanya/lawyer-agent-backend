@@ -1,4 +1,5 @@
 import json, re
+from difflib import SequenceMatcher
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -43,6 +44,25 @@ def grounded_answer(query, matches):
         if sentence and sentence not in sentences:
             sentences.append(sentence); citations.append({"document_id":row["document_id"],"page":row["page"],"paragraph":row["paragraph"],"quote":sentence})
     return " ".join(sentences), citations
+
+def grounded_model_answer(query, candidate, matches):
+    """Keep only model sentences supported by retrieved source text."""
+    if any(x in query.lower() for x in ("should i", "should we", "advise", "advice", "likely", "predict", "win", "strategy", "opinion")):
+        return REFUSAL, []
+    source_sentences = []
+    for row, text in matches:
+        source_sentences.extend(part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip())
+    accepted = []
+    citations = []
+    for sentence in re.split(r"(?<=[.!?])\s+", candidate.strip()):
+        sentence = sentence.strip()
+        if not sentence: continue
+        candidates = [(SequenceMatcher(None, sentence.lower(), source.lower()).ratio(), row, source) for row, text in matches for source in re.split(r"(?<=[.!?])\s+", text) if source.strip()]
+        match = max(candidates, default=(0, None, ""))
+        if match[0] >= 0.80:
+            accepted.append(sentence)
+            citations.append({"document_id": match[1]["document_id"], "page": match[1]["page"], "paragraph": match[1]["paragraph"], "quote": match[2].strip()})
+    return (" ".join(accepted) or NO_RESULT), citations
 
 def extract_key_points(case_id, document_id, page, paragraph, text, key):
     """Extract only fixed, source-backed fields; never synthesize a summary."""

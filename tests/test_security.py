@@ -8,6 +8,7 @@ from app.core.crypto import encrypt
 from app.db import connection
 from app.infrastructure.parsing import parse_document, DocumentParseError
 from app.services.retrieval import embedding_provider, cosine
+from app.services.llm import OllamaProvider
 from uuid import uuid4
 from app.db import init_db
 
@@ -59,3 +60,7 @@ def test_case_data_encryption_round_trip():
     ciphertext = encrypt(b'confidential case text', key)
     assert ciphertext != b'confidential case text'
     assert decrypt(ciphertext, key) == b'confidential case text'
+
+def test_ollama_provider_requires_explicit_outbound_enablement():
+    with pytest.raises(RuntimeError, match='Outbound inference is disabled'):
+        OllamaProvider(api_key='test-key').extract('question', ['source'])
